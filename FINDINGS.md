@@ -71,6 +71,12 @@ test input. **READ** = read from disassembly, not yet executed. **OPEN** = not s
   - A moving defender with no evade gets nothing; a failed evade still tries dodge/avoid.
   - PvP maps (157/159/166) halve each avoid chance. There is a 4-frame lockout.
 - **Post-hit** 0x102EFAF0 → stock 0x6FCFCE70: `item_preventheal` (117) applies state 52 to monsters except classes 704–709.
+- **Audit (complete factor list, `adv/re/hit_pd2.md` §7, `adv/re/hit_factors.json`)**:
+  - ITD has **no level condition**. The calls are D2Common #10064 (MonStats boss bit) and #11104 (hireling). Champions and minions are affected; this is VERIFIED on 106 native cases.
+  - PD2 map mods are routed by the ItemStatCost `Divide` column: map_mon_ac% → monster stat 16; map_mon_tohit/att → monster stat 119; map_glob_arealevel → game key 1, added to the monster level in Levels 137–201 (PD 0x10268D00).
+  - Hell 'desecrated' areas spawn normal monsters at level 85.
+  - Stat 120 (−def per hit) is stock and unpatched. It bakes active flat armorclass curses into the base on every hit.
+  - Negative defense (stacked −% ≤ −100) is added to AR.
 - The "PD2 patches checked" list below predates this. PD2 does replace the hit roll and resolver, through runtime-built patch records rather than static `.rdata` records.
 
 ## Monster stats
