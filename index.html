@@ -314,6 +314,19 @@ table.dev-t td:first-child{width:auto}
 .pvn span.k{color:var(--muted)}
 @media (max-width:640px){.pvn{grid-template-columns:1fr}}
 </style>
+<!--rf-sitebar-->
+<style>
+.rf-sitebar{position:relative;z-index:50;margin:-28px -16px 24px;display:flex;align-items:center;flex-wrap:wrap;gap:6px 18px;padding:9px 18px;background:rgba(7,6,5,.94);border-bottom:1px solid #3a3024;box-shadow:0 4px 14px rgba(0,0,0,.35);font:600 14px/1.3 "Alegreya Sans",system-ui,sans-serif;box-sizing:border-box;text-align:left}
+.rf-sitebar a{color:#a89c86;text-decoration:none;border-radius:6px;padding:3px 7px;white-space:nowrap}
+.rf-sitebar a:hover{color:#f3d58c}
+.rf-sitebar a:focus-visible{outline:2px solid #f3d58c;outline-offset:1px}
+.rf-sitebar .rf-home{color:#d9b25f;font-family:Cinzel,Georgia,serif;font-weight:700;letter-spacing:.05em;margin-right:auto;padding-left:0}
+.rf-sitebar .rf-tools{display:flex;flex-wrap:wrap;gap:2px 4px}
+.rf-sitebar .rf-tools a[aria-current=page]{color:#f3d58c;background:rgba(217,178,95,.13)}
+@media(max-width:640px){.rf-sitebar{padding:8px 12px;font-size:13px}.rf-sitebar .rf-home{flex-basis:100%}.rf-sitebar .rf-tools{margin-left:-7px}}
+</style>
+<nav class="rf-sitebar" aria-label="PD2 Calculators"><a class="rf-home" href="https://roofooevazan.github.io/">← PD2 Calculators</a><span class="rf-tools"><a href="https://roofooevazan.github.io/pd2-ias-calc/">IAS Calculator</a><a href="https://roofooevazan.github.io/pd2-advanced-stats/">Advanced Stats</a><a href="https://roofooevazan.github.io/pd2-hit-chance/" aria-current="page">Hit Chance</a><a href="https://roofooevazan.github.io/pd2-spawn-simulator/">Spawn Simulator</a></span></nav>
+<!--/rf-sitebar-->
 <canvas id="embers" aria-hidden="true"></canvas>
 <div class="wrap">
   <header>
