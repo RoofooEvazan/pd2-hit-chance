@@ -1,0 +1,858 @@
+<meta charset="utf-8">
+<title>PD2 Advanced Stats</title>
+<meta name="description" content="Every advanced stat of a Project Diablo 2 character, from a PD2 Armory export or a single-player save, computed with the rules recovered from the game's own code.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700&family=Alegreya+Sans:ital,wght@0,400;0,500;0,700;1,400&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Single dark look on purpose: the game's own UI is stone, soot and gold. */
+:root{
+  color-scheme:dark;
+  --void:#070605;            /* page ground */
+  --stone:#15120e;           /* panels */
+  --stone-2:#1d1913;         /* raised */
+  --pit:#0c0a08;             /* inputs, code */
+  --edge:#3b3122;            /* panel border */
+  --edge-hi:#5a4a33;
+  --ink:#dcd6c6;             /* item-white */
+  --muted:#8f8775;
+  --gold:#c7b377;            /* unique gold */
+  --gold-hi:#e6d39a;
+  --magic:#8c8cff;           /* magic blue */
+  --set:#34c759;             /* set green */
+  --rare:#e8d95c;            /* rare yellow */
+  --blood:#b3372e;
+  --heat-slow:#1f1a14; --heat-fast:#d4b46a;
+  --display:"Cinzel", "Trajan Pro", Georgia, serif;
+  --body:"Alegreya Sans", "Gill Sans", "Segoe UI", system-ui, sans-serif;
+  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html{background:var(--void)}
+body{background:var(--void) radial-gradient(1200px 500px at 50% -120px, #2a2014 0%, transparent 70%) no-repeat;color:var(--ink);font:17px/1.55 var(--body);padding-inline:16px;padding-block:28px 56px;margin:0}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+a{color:var(--magic)}
+/* ---------- header ---------- */
+header{display:flex;flex-direction:column;align-items:center;text-align:center;gap:6px}
+h1{font:700 clamp(28px,5vw,46px)/1.05 var(--display);letter-spacing:.08em;margin:0;color:var(--gold);text-shadow:0 2px 0 #000,0 0 24px rgba(199,179,119,.18);text-wrap:balance}
+.sub{color:var(--muted);margin:0;max-width:62ch;font-size:16px}
+.rune-rule{width:min(520px,90%);height:10px;margin:6px auto 0;background:
+  linear-gradient(90deg,transparent,var(--edge-hi) 20%,var(--gold) 50%,var(--edge-hi) 80%,transparent) center/100% 1px no-repeat;position:relative}
+.rune-rule::after{content:"";position:absolute;left:50%;top:50%;width:8px;height:8px;background:var(--gold);transform:translate(-50%,-50%) rotate(45deg);box-shadow:0 0 0 3px var(--void)}
+/* ---------- tabs ---------- */
+.tabs{display:flex;flex-wrap:wrap;justify-content:center;gap:6px;border-bottom:1px solid var(--edge)}
+.tab{appearance:none;border:1px solid var(--edge);border-bottom:0;background:linear-gradient(#1b1712,#110e0b);color:var(--muted);
+  font:500 14px var(--display);letter-spacing:.1em;padding:11px 18px 10px;border-radius:4px 4px 0 0;cursor:pointer;position:relative;top:1px}
+.tab:hover{color:var(--gold-hi)}
+.tab[aria-selected="true"]{color:var(--gold);background:linear-gradient(#2a2319,var(--stone));border-color:var(--edge-hi);border-bottom:1px solid var(--stone)}
+.tab:focus-visible,.subtab:focus-visible,button:focus-visible,select:focus-visible,input:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.subtabs{display:flex;flex-wrap:wrap;gap:6px}
+.subtab{appearance:none;border:1px solid var(--edge);background:var(--pit);color:var(--muted);font:500 13px var(--display);letter-spacing:.08em;padding:8px 14px;border-radius:3px;cursor:pointer}
+.subtab[aria-selected="true"]{color:#120f0a;background:var(--gold);border-color:var(--gold)}
+/* ---------- panels ---------- */
+.panel{min-width:0;background:linear-gradient(180deg,var(--stone-2),var(--stone) 120px);border:1px solid var(--edge);border-radius:4px;
+  box-shadow:inset 0 0 0 1px #000,inset 0 1px 0 rgba(230,211,154,.06),0 10px 30px rgba(0,0,0,.45);padding:20px;display:flex;flex-direction:column;gap:16px}
+.cols{display:grid;grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:20px;align-items:start}
+@media (max-width:880px){.cols{grid-template-columns:minmax(0,1fr)}}
+h2{font:700 13px var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin:0}
+h3{font:700 20px/1.25 var(--display);letter-spacing:.04em;color:var(--gold-hi);margin:0;text-wrap:balance}
+h4{font:700 15px var(--display);letter-spacing:.06em;color:var(--gold);margin:0}
+fieldset{border:0;margin:0;padding:0;min-width:0;display:flex;flex-direction:column;gap:10px}
+legend{font:700 12px var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--gold);margin-bottom:8px;padding:0}
+.row{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+label{display:flex;flex-direction:column;gap:4px;font-size:14px;color:var(--muted)}
+label.check{flex-direction:row;align-items:center;gap:8px;color:var(--ink)}
+input[type=number],select{font:15px var(--mono);color:var(--ink);background:var(--pit);border:1px solid var(--edge);border-radius:2px;padding:8px 9px;width:100%;min-width:0;box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+select{font-family:var(--body);font-size:16px}
+select:disabled{opacity:.5;cursor:not-allowed}
+input[type=checkbox]{accent-color:var(--gold);width:16px;height:16px}
+.hint{font-size:14px;color:var(--muted);margin:0}
+.swings{display:flex;flex-direction:column;gap:6px;margin-top:4px}
+.swbar{display:flex;gap:2px;height:30px;border-radius:4px;overflow:hidden;min-width:0}
+.swbar .sw{position:relative;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:600;color:var(--ink);background:color-mix(in srgb, var(--gold, #c9a14a) 28%, transparent);border:1px solid color-mix(in srgb, var(--gold, #c9a14a) 55%, transparent);min-width:22px;font-variant-numeric:tabular-nums}
+.swbar .sw.last{background:color-mix(in srgb, var(--gold, #c9a14a) 14%, transparent)}
+.swbar .hit{position:absolute;top:-2px;bottom:-2px;width:3px;background:#e0402c;box-shadow:0 0 6px #e0402c}
+.swbar .hit.srv{background:transparent;border-left:3px dotted #7fb2ff;box-shadow:none}
+.swlegend{font-size:13px;color:var(--muted);display:flex;gap:14px;flex-wrap:wrap}
+.swlegend i{display:inline-block;width:10px;height:10px;margin-right:5px;vertical-align:-1px;background:#e0402c}
+.swlegend i.srv{background:transparent;border-left:3px dotted #7fb2ff;width:6px}
+.sk-v{font-size:13px;color:var(--gold, var(--ink));min-height:1.2em;font-variant-numeric:tabular-nums}
+/* ---------- results ---------- */
+.results{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px}
+.res{display:flex;flex-direction:column;gap:2px;padding:12px 14px;background:var(--pit);border:1px solid var(--edge);border-radius:3px}
+.res .lab{font:700 12px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.res .big{font:700 52px/1 var(--display);color:var(--gold-hi);font-variant-numeric:tabular-nums;text-shadow:0 2px 0 #000}
+.res .small{font:13px var(--mono);color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px 16px;border-top:1px solid var(--edge);padding-top:12px}
+.stats div{display:flex;flex-direction:column}
+.stats .k{font-size:13px;color:var(--muted)}
+.stats .v{font:500 15px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink)}
+.note{border:1px solid #2d3a66;background:rgba(80,80,200,.08);color:#c9c9f2;padding:10px 12px;font-size:15px;border-radius:3px}
+.note + .note{margin-top:8px}
+.tablewrap{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{text-align:right;padding:6px 10px;border-bottom:1px solid var(--edge);font:14px var(--mono);white-space:nowrap}
+th{font:700 11px var(--display);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+th:first-child,td:first-child{text-align:left}
+tr.now td{background:rgba(52,199,89,.12);color:var(--set);font-weight:500}
+tr.cap td{color:#5d5648}
+.linkbtn{appearance:none;background:none;border:0;padding:0;color:var(--magic);font:inherit;font-size:15px;cursor:pointer;text-decoration:underline;text-underline-offset:3px;align-self:flex-start}
+/* ---------- frame grid ---------- */
+.heat-head{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:12px 24px}
+.heat-head p{margin:6px 0 0;max-width:72ch;font-size:15px;color:var(--muted)}
+.heat-ctl{display:flex;flex-wrap:wrap;gap:10px}
+.heat-ctl label{min-width:118px}
+#heatpanel{min-width:0;max-width:100%}
+.heatwrap{overflow-x:auto;padding-bottom:4px;max-width:100%}
+table.heat{width:auto;border-collapse:separate;border-spacing:2px;margin:0 auto}
+table.heat td,table.heat th{border:0;padding:0;text-align:center}
+table.heat td{width:40px;min-width:40px;height:28px;font:500 12px var(--mono);border-radius:2px;cursor:default;position:relative}
+table.heat th{font:500 11px var(--mono);letter-spacing:0;text-transform:none;color:var(--muted);padding:0 4px}
+table.heat th.rowh{text-align:right;padding-right:8px}
+table.heat td.cap::after{content:"";position:absolute;right:3px;top:3px;width:4px;height:4px;border-radius:50%;background:currentColor;opacity:.6}
+table.heat td.you{outline:2px solid var(--set);outline-offset:1px}
+table.heat td:hover{outline:2px solid var(--ink);outline-offset:1px;z-index:1}
+.heat-axis{font:700 11px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted);text-align:center}
+.heat-read{font:13px var(--mono);color:var(--ink);min-height:1.5em;margin:0}
+.heat-key{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:center;font-size:14px;color:var(--muted)}
+.heat-key .ramp{display:inline-block;width:120px;height:10px;border-radius:2px;vertical-align:middle;margin-inline:6px}
+.heat-key .sw{display:inline-block;width:14px;height:14px;border-radius:2px;vertical-align:middle;margin-right:6px}
+/* ---------- explainer ---------- */
+.prose{max-width:72ch;display:flex;flex-direction:column;gap:12px}
+.prose p{margin:0}
+.chain{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:4px 0}
+.chain .link{flex:1 1 120px;min-width:0;padding:10px 12px;background:var(--pit);border:1px solid var(--edge);position:relative}
+.chain .link + .link{border-left:0}
+.chain .link b{display:block;font:700 13px var(--display);letter-spacing:.08em;color:var(--gold)}
+.chain .link span{font-size:14px;color:var(--muted)}
+.steps-grid{display:grid;grid-template-columns:minmax(0,1.35fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.steps-grid{grid-template-columns:minmax(0,1fr)}.worked{position:static}}
+ol.steps{list-style:none;counter-reset:s;margin:0;padding:0;display:flex;flex-direction:column;gap:14px}
+ol.steps > li{counter-increment:s;display:grid;grid-template-columns:34px minmax(0,1fr);gap:12px}
+ol.steps > li::before{content:counter(s);display:flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--gold);color:#120f0a;font:700 14px var(--display);clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%);margin-top:2px}
+ol.steps > li > div{display:flex;flex-direction:column;gap:6px}
+ol.steps p{margin:0}
+.eq{font:14px/1.6 var(--mono);background:var(--pit);border:1px solid var(--edge);padding:8px 10px;border-radius:2px;overflow-x:auto;white-space:pre;color:var(--ink)}
+.worked{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);background:var(--pit);border:1px solid var(--edge-hi);border-radius:3px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.worked .tag{font:700 11px var(--display);letter-spacing:.14em;text-transform:uppercase;color:var(--magic)}
+.worked dl{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;margin:0;font-size:15px}
+.worked dt{color:var(--muted)}
+.worked dd{margin:0;font-family:var(--mono);font-size:14px;text-align:right;font-variant-numeric:tabular-nums}
+.worked .total{border-top:1px solid var(--edge);padding-top:8px;display:flex;justify-content:space-between;align-items:baseline}
+.worked .total b{font:700 34px var(--display);color:var(--gold-hi)}
+.gold{color:var(--gold)} .magic{color:var(--magic)} .setc{color:var(--set)} .rare{color:var(--rare)}
+.callout{border-left:3px solid var(--gold);padding:8px 12px;background:rgba(199,179,119,.06);font-size:16px}
+/* ---------- developer reference ---------- */
+.dev{display:grid;grid-template-columns:220px minmax(0,1fr);gap:24px;align-items:start}
+@media (max-width:880px){.dev{grid-template-columns:minmax(0,1fr)}.toc{position:static!important}}
+.toc{position:sticky;top:calc(env(safe-area-inset-top,0px) + 12px);display:flex;flex-direction:column;gap:2px;font-size:15px;padding:12px;background:var(--pit);border:1px solid var(--edge);border-radius:3px}
+.toc a{color:var(--muted);text-decoration:none;padding:3px 0}
+.toc a:hover{color:var(--gold-hi)}
+.dev section{display:flex;flex-direction:column;gap:10px;padding-bottom:18px;border-bottom:1px solid var(--edge);scroll-margin-top:16px}
+.dev section:last-child{border-bottom:0}
+.dev p,.dev li{max-width:78ch}
+.dev ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+pre.code{font:13px/1.6 var(--mono);background:var(--pit);border:1px solid var(--edge);border-radius:3px;padding:12px 14px;overflow-x:auto;margin:0;color:#d8d2c2}
+pre.code .c{color:#6f6858} pre.code .k{color:var(--gold)}
+code{font:0.88em var(--mono);color:var(--gold-hi);background:rgba(199,179,119,.08);padding:1px 4px;border-radius:2px}
+.badge{display:inline-block;font:700 10px var(--display);letter-spacing:.12em;padding:2px 6px;border-radius:2px;vertical-align:middle}
+.badge.v{color:#0b1a0f;background:var(--set)} .badge.r{color:#12122a;background:var(--magic)} .badge.o{color:#1a1206;background:var(--rare)}
+table.ref td,table.ref th{white-space:normal;text-align:left;font-family:var(--body);font-size:15px;vertical-align:top}
+table.ref td code{white-space:nowrap}
+table.mini td,table.mini th{padding:4px 6px;font-size:12px;text-align:center}
+footer{font-size:14px;color:var(--muted);text-align:center;max-width:90ch;margin:0 auto}
+@media (prefers-reduced-motion:no-preference){ .pane{animation:rise .25s ease-out} @keyframes rise{from{opacity:.4;transform:translateY(4px)}to{opacity:1;transform:none}} }
+
+/* ===== HD dungeon skin (original artwork, drawn in CSS/SVG/canvas) ===== */
+body{background-color:#080605;background-image:
+  radial-gradient(700px 420px at 8% -60px, rgba(255,140,40,.16), transparent 70%),
+  radial-gradient(700px 420px at 92% -60px, rgba(255,140,40,.16), transparent 70%),
+  radial-gradient(1400px 900px at 50% 40%, transparent 55%, rgba(0,0,0,.75) 100%),
+  var(--stone-tex, none);background-attachment:fixed,fixed,fixed,scroll;background-size:auto,auto,auto,512px 512px;background-repeat:no-repeat,no-repeat,no-repeat,repeat}
+#embers{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.8}
+.wrap{position:relative;z-index:1}
+header{padding-top:6px}
+.title-row{display:flex;align-items:center;justify-content:center;gap:clamp(10px,3vw,28px)}
+.orb{width:clamp(34px,6vw,54px);aspect-ratio:1;border-radius:50%;flex:none;position:relative;
+  box-shadow:0 0 0 2px #000,0 0 0 4px #7a6236,0 0 0 5px #000,0 6px 18px rgba(0,0,0,.8)}
+.orb::after{content:"";position:absolute;left:18%;top:12%;width:38%;height:26%;border-radius:50%;background:radial-gradient(closest-side,rgba(255,255,255,.55),transparent);transform:rotate(-25deg)}
+.orb.life{background:radial-gradient(circle at 50% 70%,#e0342a 0%,#8c1310 45%,#2a0404 80%)}
+.orb.mana{background:radial-gradient(circle at 50% 70%,#4a63ff 0%,#1a2a9c 45%,#050a33 80%)}
+@media (prefers-reduced-motion:no-preference){.orb.life{animation:slosh 5s ease-in-out infinite}.orb.mana{animation:slosh 6s ease-in-out infinite reverse}
+  @keyframes slosh{50%{filter:brightness(1.18)}}}
+h1{background:linear-gradient(180deg,#fff6d5 0%,#e9d28c 38%,#b08d45 62%,#6f5424 100%);-webkit-background-clip:text;background-clip:text;color:transparent;
+  text-shadow:none;filter:drop-shadow(0 2px 0 #000) drop-shadow(0 0 18px rgba(230,190,110,.25))}
+/* carved panels with gilded corners */
+.panel{position:relative;background:
+  linear-gradient(180deg,rgba(40,32,22,.92),rgba(18,14,10,.95) 140px),var(--stone-tex2, none);background-size:auto,256px 256px;background-repeat:no-repeat,repeat;
+  border:1px solid #000;border-radius:2px;
+  box-shadow:inset 0 0 0 1px #6b5532,inset 0 0 0 3px #17110b,inset 0 0 0 4px #3e3120,inset 0 2px 30px rgba(0,0,0,.6),0 14px 40px rgba(0,0,0,.7);
+  padding:26px 24px}
+.panel::before{content:"";position:absolute;inset:-7px;pointer-events:none;background:
+  url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2244%22%20height%3D%2244%22%20viewBox%3D%220%200%2044%2044%22%3E%3Cg%20transform%3D%22rotate%280%2022%2022%29%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23f1dfa6%22/%3E%3Cstop%20offset%3D%22.45%22%20stop-color%3D%22%23b8974f%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%235c4520%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d%3D%22M3%2041%20V9%20Q3%203%209%203%20H41%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M3%2041%20V9%20Q3%203%209%203%20H41%22%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M9%2030%20Q9%209%2030%209%22%20fill%3D%22none%22%20stroke%3D%22%238a6d35%22%20stroke-width%3D%221.2%22/%3E%3Cpath%20d%3D%22M13%203%20q3%206%20-2%2010%20M3%2013%20q6%203%2010%20-2%22%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%221.4%22/%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%229%22%20height%3D%229%22%20transform%3D%22rotate%2845%209.5%209.5%29%22%20fill%3D%22%231a0c08%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%221.5%22/%3E%3Ccircle%20cx%3D%229.5%22%20cy%3D%229.5%22%20r%3D%222.4%22%20fill%3D%22%23c0392b%22/%3E%3Ccircle%20cx%3D%228.8%22%20cy%3D%228.8%22%20r%3D%22.9%22%20fill%3D%22%23ffb3a8%22/%3E%3C/g%3E%3C/svg%3E") left top/44px 44px no-repeat,url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2244%22%20height%3D%2244%22%20viewBox%3D%220%200%2044%2044%22%3E%3Cg%20transform%3D%22rotate%2890%2022%2022%29%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23f1dfa6%22/%3E%3Cstop%20offset%3D%22.45%22%20stop-color%3D%22%23b8974f%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%235c4520%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d%3D%22M3%2041%20V9%20Q3%203%209%203%20H41%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M3%2041%20V9%20Q3%203%209%203%20H41%22%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M9%2030%20Q9%209%2030%209%22%20fill%3D%22none%22%20stroke%3D%22%238a6d35%22%20stroke-width%3D%221.2%22/%3E%3Cpath%20d%3D%22M13%203%20q3%206%20-2%2010%20M3%2013%20q6%203%2010%20-2%22%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%221.4%22/%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%229%22%20height%3D%229%22%20transform%3D%22rotate%2845%209.5%209.5%29%22%20fill%3D%22%231a0c08%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%221.5%22/%3E%3Ccircle%20cx%3D%229.5%22%20cy%3D%229.5%22%20r%3D%222.4%22%20fill%3D%22%23c0392b%22/%3E%3Ccircle%20cx%3D%228.8%22%20cy%3D%228.8%22%20r%3D%22.9%22%20fill%3D%22%23ffb3a8%22/%3E%3C/g%3E%3C/svg%3E") right top/44px 44px no-repeat,url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2244%22%20height%3D%2244%22%20viewBox%3D%220%200%2044%2044%22%3E%3Cg%20transform%3D%22rotate%28270%2022%2022%29%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23f1dfa6%22/%3E%3Cstop%20offset%3D%22.45%22%20stop-color%3D%22%23b8974f%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%235c4520%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d%3D%22M3%2041%20V9%20Q3%203%209%203%20H41%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M3%2041%20V9%20Q3%203%209%203%20H41%22%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M9%2030%20Q9%209%2030%209%22%20fill%3D%22none%22%20stroke%3D%22%238a6d35%22%20stroke-width%3D%221.2%22/%3E%3Cpath%20d%3D%22M13%203%20q3%206%20-2%2010%20M3%2013%20q6%203%2010%20-2%22%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%221.4%22/%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%229%22%20height%3D%229%22%20transform%3D%22rotate%2845%209.5%209.5%29%22%20fill%3D%22%231a0c08%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%221.5%22/%3E%3Ccircle%20cx%3D%229.5%22%20cy%3D%229.5%22%20r%3D%222.4%22%20fill%3D%22%23c0392b%22/%3E%3Ccircle%20cx%3D%228.8%22%20cy%3D%228.8%22%20r%3D%22.9%22%20fill%3D%22%23ffb3a8%22/%3E%3C/g%3E%3C/svg%3E") left bottom/44px 44px no-repeat,url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2244%22%20height%3D%2244%22%20viewBox%3D%220%200%2044%2044%22%3E%3Cg%20transform%3D%22rotate%28180%2022%2022%29%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%23f1dfa6%22/%3E%3Cstop%20offset%3D%22.45%22%20stop-color%3D%22%23b8974f%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%235c4520%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Cpath%20d%3D%22M3%2041%20V9%20Q3%203%209%203%20H41%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%226%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M3%2041%20V9%20Q3%203%209%203%20H41%22%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%223%22%20stroke-linecap%3D%22round%22/%3E%3Cpath%20d%3D%22M9%2030%20Q9%209%2030%209%22%20fill%3D%22none%22%20stroke%3D%22%238a6d35%22%20stroke-width%3D%221.2%22/%3E%3Cpath%20d%3D%22M13%203%20q3%206%20-2%2010%20M3%2013%20q6%203%2010%20-2%22%20fill%3D%22none%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%221.4%22/%3E%3Crect%20x%3D%225%22%20y%3D%225%22%20width%3D%229%22%20height%3D%229%22%20transform%3D%22rotate%2845%209.5%209.5%29%22%20fill%3D%22%231a0c08%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%221.5%22/%3E%3Ccircle%20cx%3D%229.5%22%20cy%3D%229.5%22%20r%3D%222.4%22%20fill%3D%22%23c0392b%22/%3E%3Ccircle%20cx%3D%228.8%22%20cy%3D%228.8%22%20r%3D%22.9%22%20fill%3D%22%23ffb3a8%22/%3E%3C/g%3E%3C/svg%3E") right bottom/44px 44px no-repeat}
+/* tabs as stone buttons */
+.tabs{border-bottom:0;gap:10px}
+.tab,.subtab,.btn{appearance:none;position:relative;top:0;cursor:pointer;color:#d8c48a;font:600 14px var(--display);letter-spacing:.12em;
+  padding:12px 22px;border-radius:3px;border:1px solid #000;
+  background:linear-gradient(180deg,#4a3d2b 0%,#2c2319 48%,#1c160f 52%,#2a2117 100%);
+  box-shadow:inset 0 1px 0 rgba(255,230,170,.25),inset 0 -2px 0 rgba(0,0,0,.6),0 0 0 1px #5b4a2e,0 3px 6px rgba(0,0,0,.7);
+  text-shadow:0 1px 0 #000;transition:filter .12s,transform .06s}
+.tab:hover,.subtab:hover,.btn:hover{filter:brightness(1.18);color:#fff0c2}
+.tab:active,.subtab:active,.btn:active{transform:translateY(1px);box-shadow:inset 0 2px 6px rgba(0,0,0,.8),0 0 0 1px #5b4a2e}
+.tab[aria-selected="true"],.subtab[aria-selected="true"]{color:#fff3c9;border-bottom:1px solid #000;
+  background:linear-gradient(180deg,#7a5f2e 0%,#4b391b 48%,#33260f 52%,#4a3718 100%);
+  box-shadow:inset 0 1px 0 rgba(255,236,180,.45),inset 0 -2px 0 rgba(0,0,0,.5),0 0 0 1px #b9954c,0 0 16px rgba(230,180,80,.25),0 3px 6px rgba(0,0,0,.7)}
+.subtab{font-size:13px;padding:9px 16px}
+.btn{font-size:13px;padding:9px 16px;align-self:flex-start;text-decoration:none}
+/* carved inputs */
+input[type=number],select{background:#0b0907 linear-gradient(180deg,#050403,#12100c);border:1px solid #000;border-radius:2px;color:#efe6cf;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.9),0 0 0 1px #4a3b25,0 1px 0 1px rgba(255,220,150,.06)}
+select{appearance:none;-webkit-appearance:none;padding-right:30px;background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2212%22%20height%3D%228%22%20viewBox%3D%220%200%2012%208%22%3E%3Cpath%20d%3D%22M1%201%20L6%207%20L11%201%22%20fill%3D%22none%22%20stroke%3D%22%23c7b377%22%20stroke-width%3D%222%22/%3E%3C/svg%3E"),linear-gradient(180deg,#050403,#12100c);background-repeat:no-repeat;background-position:right 10px center,0 0}
+input[type=number]:focus,select:focus{box-shadow:inset 0 2px 5px rgba(0,0,0,.9),0 0 0 1px #c7a55a,0 0 10px rgba(230,180,80,.3);outline:none}
+input[type=checkbox]{appearance:none;-webkit-appearance:none;width:18px;height:18px;border:1px solid #000;border-radius:2px;background:#0b0907;box-shadow:inset 0 2px 4px #000,0 0 0 1px #6b5532;cursor:pointer;flex:none}
+input[type=checkbox]:checked{background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20width%3D%2212%22%20height%3D%2212%22%20viewBox%3D%220%200%2012%2012%22%3E%3Cpath%20d%3D%22M2%206%20L5%209%20L10%203%22%20fill%3D%22none%22%20stroke%3D%22%231a0c08%22%20stroke-width%3D%222.2%22/%3E%3C/svg%3E") center/12px no-repeat,radial-gradient(circle at 40% 35%,#ffe9a8,#c9a24e 60%,#7a5a22)}
+legend,h2{display:flex;align-items:center;gap:8px}
+legend::before,h2::before{content:"";width:8px;height:8px;transform:rotate(45deg);background:radial-gradient(circle at 35% 35%,#ff9d8f,#b3261c 60%,#4a0806);box-shadow:0 0 0 1px #000,0 0 0 2px #8a6d35}
+/* item-tooltip style result boxes */
+.res{background:rgba(0,0,0,.82);border:1px solid #2e261a;box-shadow:inset 0 0 0 1px #000,0 0 0 1px #4d3f28;text-align:center;align-items:center;padding:14px}
+.res .lab{color:#c7b377}
+.res .big{background:linear-gradient(180deg,#fff7dc,#e6c877 55%,#9c7a34);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:none;filter:drop-shadow(0 0 10px rgba(240,200,110,.35)) drop-shadow(0 2px 0 #000)}
+.res .small{color:#8c8cff}
+.stats{border-top:1px solid #3b3122}
+.note{background:rgba(0,0,0,.55);border:1px solid #2d3566;color:#b9b9ff}
+.callout{background:rgba(0,0,0,.45);border-left:3px solid #b9954c}
+tr.now td{background:rgba(52,199,89,.14)}
+.worked,.toc,pre.code,.eq,.chain .link{background:rgba(0,0,0,.6)}
+table.heat td{box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.rune-rule{height:14px}
+
+.fast-tools{display:flex;flex-wrap:wrap;gap:10px}
+.fast-root{display:flex;flex-direction:column;gap:12px}
+details.fx > summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;user-select:none}
+details.fx > summary::-webkit-details-marker{display:none}
+details.fx > summary::before{content:"";width:0;height:0;border-left:7px solid #c7b377;border-top:5px solid transparent;border-bottom:5px solid transparent;transition:transform .15s;flex:none}
+details.fx[open] > summary::before{transform:rotate(90deg)}
+details.fx.c{border:1px solid #000;box-shadow:0 0 0 1px #4d3f28,inset 0 1px 0 rgba(255,230,170,.08);background:rgba(0,0,0,.45);border-radius:2px}
+details.fx.c > summary{padding:14px 16px;font:700 18px var(--display);letter-spacing:.06em;color:var(--gold-hi)}
+details.fx.c > .inner{padding:0 14px 14px;display:flex;flex-direction:column;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-left:auto}
+.chip{font:600 12px var(--mono);letter-spacing:0;color:#dcd6c6;background:#0b0907;border:1px solid #3b3122;border-radius:2px;padding:3px 8px;white-space:nowrap}
+.chip b{color:var(--gold-hi)}
+details.fx.f{border-left:2px solid #6b5532;background:rgba(20,16,11,.6)}
+details.fx.f > summary{padding:10px 12px;font:700 15px var(--display);color:var(--gold)}
+details.fx.f > .inner{padding:0 10px 10px 16px;display:flex;flex-direction:column;gap:8px}
+details.fx.t{border:1px solid #2e261a;background:rgba(0,0,0,.5)}
+details.fx.t > summary{padding:9px 12px;font:600 15px var(--body);color:var(--ink)}
+details.fx.t > summary .n{font:700 22px var(--display);color:var(--gold-hi);min-width:1.6em}
+details.fx.t > summary .sub2{color:var(--muted);font-size:14px}
+details.fx.t > .inner{padding:0 8px 10px}
+table.fast td,table.fast th{white-space:normal;text-align:left;vertical-align:top;font-size:13px}
+table.fast td.names{min-width:200px;font-family:var(--body);font-size:15px;color:var(--ink)}
+table.fast td.how{min-width:180px;font-family:var(--body);font-size:13px;color:var(--muted)}
+table.fast td.num{text-align:right;white-space:nowrap}
+.warn{color:#e8a25c}
+@media (max-width:640px){
+  table.fast thead{display:none}
+  table.fast, table.fast tbody, table.fast tr, table.fast td{display:block;width:100%}
+  table.fast tr{border-bottom:1px solid var(--edge);padding:8px 0}
+  table.fast td{border:0;padding:2px 4px;text-align:left!important}
+  table.fast td[data-k]::before{content:attr(data-k) ": ";color:var(--muted);font-family:var(--body);font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  details.fx.c > summary{font-size:16px}
+  .chips{margin-left:0}
+}
+
+@media (max-width:640px){ .tabs{display:grid;grid-template-columns:1fr 1fr;gap:8px} .tab{padding:11px 8px;font-size:12px;letter-spacing:.06em} }
+details.assume > summary{cursor:pointer;color:var(--gold);font-weight:500}
+
+.code-k{display:inline-block;font:11px var(--mono);color:#7d7563;background:rgba(0,0,0,.45);border:1px solid #2a2319;border-radius:2px;padding:0 4px;margin-left:4px;vertical-align:1px;white-space:nowrap}
+.stats .wide{grid-column:1/-1}
+.stats .wide .v{font-family:var(--body);font-size:16px}
+
+/* ===== Advanced Stats page ===== */
+.globe{width:clamp(58px,10vw,104px);aspect-ratio:1;flex:none;display:block;filter:drop-shadow(0 6px 14px rgba(0,0,0,.85))}
+.load{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:20px;align-items:start}
+@media (max-width:880px){.load{grid-template-columns:minmax(0,1fr)}}
+.load ol{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:16px}
+.load ol li::marker{color:var(--gold);font-family:var(--display)}
+input[type=text],textarea{font:15px var(--mono);color:#efe6cf;background:#0b0907 linear-gradient(180deg,#050403,#12100c);border:1px solid #000;border-radius:2px;
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.9),0 0 0 1px #4a3b25;padding:9px 10px;width:100%;min-width:0}
+input[type=text]:focus,textarea:focus{box-shadow:inset 0 2px 5px rgba(0,0,0,.9),0 0 0 1px #c7a55a,0 0 10px rgba(230,180,80,.3);outline:none}
+textarea{min-height:90px;resize:vertical;font-size:13px}
+.inline{display:flex;gap:8px;align-items:stretch;flex-wrap:wrap}
+.inline > input{flex:1 1 200px}
+.apiurl{font:13px var(--mono);color:var(--gold-hi);word-break:break-all;user-select:all;background:rgba(0,0,0,.5);border:1px dashed #4a3b25;padding:6px 8px;border-radius:2px}
+.drop{border:2px dashed #5a4a33;border-radius:4px;padding:22px 16px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;
+  background:rgba(0,0,0,.35);cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--gold);background:rgba(199,179,119,.08)}
+.drop b{font:700 16px var(--display);letter-spacing:.06em;color:var(--gold-hi)}
+.drop span{font-size:14px;color:var(--muted)}
+.status{font-size:15px;min-height:1.4em}
+.status.err{color:#ff8a7a}.status.ok{color:var(--set)}
+.who{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.who .name{font:700 clamp(22px,4vw,32px)/1.1 var(--display);color:var(--gold-hi);letter-spacing:.04em}
+.who .meta{color:var(--muted);font-size:16px}
+.pill{font:600 12px var(--display);letter-spacing:.1em;text-transform:uppercase;padding:3px 8px;border-radius:2px;border:1px solid #4a3b25;color:var(--gold);background:rgba(0,0,0,.5)}
+.pill.ex{color:#b9b9ff;border-color:#2d3566}
+.ctl{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+.ctl label{min-width:150px;flex:0 1 190px}
+/* in-game panel replica */
+.bh{font:15px/1.5 var(--mono);background:rgba(0,0,0,.82);border:1px solid #2e261a;box-shadow:inset 0 0 0 1px #000,0 0 0 1px #4d3f28;padding:14px 16px;
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:2px 28px}
+@media (max-width:760px){.bh{grid-template-columns:minmax(0,1fr)}}
+.bh .grp{display:flex;flex-direction:column;gap:1px;padding:6px 0;border-bottom:1px solid #1f1a12}
+.bh .ln{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.bh .k{color:#b3ab98}
+.bh .v{color:#fff;text-align:right;font-variant-numeric:tabular-nums}
+.c-fire{color:#ff6a3d}.c-cold{color:#6ab4ff}.c-light{color:#ffe14d}.c-pois{color:#3ddc5c}.c-mag{color:#b48cff}.c-phys{color:#e8e2d0}.c-curse{color:#c870ff}
+.c-good{color:var(--set)}.c-warn{color:#e8a25c}.c-bad{color:#ff6a5a}
+[data-src]{cursor:help;text-decoration:underline dotted rgba(230,211,154,.35);text-underline-offset:3px}
+/* stat cards */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:16px}
+.card{background:rgba(0,0,0,.55);border:1px solid #2e261a;box-shadow:inset 0 0 0 1px #000,0 0 0 1px #3a2f1f;border-radius:2px;padding:14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card h4{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:2px 8px}
+.card h4 small{font:400 13px var(--body);color:var(--muted);letter-spacing:0}
+.big2{font:700 36px/1 var(--display);color:var(--gold-hi);font-variant-numeric:tabular-nums}
+.big2 small{font:500 15px var(--body);color:var(--muted);margin-left:6px}
+dl.kv{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:4px 12px;margin:0;font-size:15px}
+dl.kv dt{color:var(--muted);min-width:0}
+dl.kv dd{margin:0;text-align:right;font:14px var(--mono);font-variant-numeric:tabular-nums;color:var(--ink);overflow-wrap:anywhere}
+dl.kv dt.sub{padding-left:12px;font-size:14px}
+.why{font-size:13.5px;color:var(--muted);margin:0;line-height:1.45}
+.meter{height:8px;background:#0b0907;border:1px solid #2a2319;border-radius:1px;overflow:hidden}
+.meter i{display:block;height:100%;background:linear-gradient(90deg,#6b5532,var(--gold))}
+/* resist table */
+table.rtab td:first-child{font-family:var(--body);font-size:15px}
+/* breakpoint lists */
+.bp{display:flex;flex-wrap:wrap;gap:6px}
+.bp span{font:13px var(--mono);padding:4px 8px;border:1px solid #2e261a;background:rgba(0,0,0,.5);border-radius:2px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bp span b{color:var(--gold-hi);font-weight:500}
+.bp span.on{border-color:var(--set);color:var(--set);background:rgba(52,199,89,.12)}
+.bp span.on b{color:var(--set)}
+.bp span.next{border-color:#8a6d35}
+/* skills */
+.tree{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px}
+.tree .tabcol{display:flex;flex-direction:column;gap:4px}
+.skl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:baseline;padding:4px 8px;border-bottom:1px solid #1f1a12;font-size:15px}
+.skl .lv{font:14px var(--mono);white-space:nowrap}
+.skl.zero{color:#6b6454}
+.skl .lv b{color:var(--gold-hi);font-weight:500}
+.buffs{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px 14px}
+/* items */
+.items{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px}
+.item{background:rgba(0,0,0,.82);border:1px solid #2e261a;box-shadow:inset 0 0 0 1px #000,0 0 0 1px #4d3f28;padding:12px;text-align:center;display:flex;flex-direction:column;gap:2px;font-size:14.5px;min-width:0}
+.item .slot{font:700 11px var(--display);letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.item .nm{font:600 16px var(--body)}
+.item .base{color:var(--muted);font-size:14px}
+.item .ln{color:var(--magic)}
+.item .ln.dim{color:#8b8b9e}
+.q-7{color:var(--gold)}.q-5{color:var(--set)}.q-6,.q-8{color:var(--rare)}.q-4{color:var(--magic)}.q-rw{color:var(--gold)}.q-3{color:#c9c9c9}.q-2,.q-1{color:var(--ink)}
+/* all stats */
+table.all td,table.all th{white-space:normal;vertical-align:top}
+table.all td.src{font-family:var(--body);font-size:13.5px;color:var(--muted);text-align:left;min-width:220px}
+table.all td:nth-child(2){text-align:left;font-family:var(--body);font-size:15px}
+.filter{max-width:320px}
+.ovr > summary{cursor:pointer;color:var(--gold);font-weight:500}
+.dr-sum{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.dr-sum .card b{font:700 26px var(--display);color:var(--gold-hi)}
+.chartwrap{position:relative;max-width:760px}
+#dr-chart{width:100%;height:auto;display:block;background:#0b0907;border:1px solid #2e261a}
+#dr-chart text{font:12px var(--mono);fill:#a39a86}
+#dr-chart .lbl{font:600 12px var(--body)}
+.ctip{position:absolute;pointer-events:none;background:rgba(6,5,4,.96);border:1px solid #6b5532;padding:6px 8px;font:12px var(--mono);color:var(--ink);white-space:nowrap}
+.sw-i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:6px}
+details.sec{border-top:1px solid #2a2319;padding-top:4px}
+details.sec > summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 14px;padding:8px 0}
+details.sec > summary::-webkit-details-marker{display:none}
+details.sec > summary h2::after{content:"";display:inline-block;margin-left:10px;width:0;height:0;border-left:6px solid var(--gold);border-top:4px solid transparent;border-bottom:4px solid transparent;transition:transform .15s;vertical-align:1px}
+details.sec[open] > summary h2::after{transform:rotate(90deg)}
+.sumnote{font:13px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.secin{display:flex;flex-direction:column;gap:14px;padding-bottom:10px}
+details.loadbox > summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;align-items:baseline;gap:6px 14px}
+details.loadbox > summary::-webkit-details-marker{display:none}
+details.loadbox[open] > summary{margin-bottom:14px}
+.viewbar{display:flex;flex-wrap:wrap;gap:10px 22px;align-items:center}
+.seg{display:inline-flex;border:1px solid #000;box-shadow:0 0 0 1px #5b4a2e;border-radius:3px;overflow:hidden}
+.seg button{appearance:none;border:0;cursor:pointer;font:600 13px var(--display);letter-spacing:.1em;padding:9px 18px;color:#d8c48a;background:linear-gradient(180deg,#3a2f20,#1c160f)}
+.seg button[aria-pressed="true"]{color:#fff3c9;background:linear-gradient(180deg,#7a5f2e,#3b2c12)}
+.seg button:disabled{opacity:.45;cursor:not-allowed}
+.reslist{display:flex;flex-direction:column;gap:6px}
+details.rrow{background:rgba(0,0,0,.5);border:1px solid #2e261a;border-radius:2px}
+details.rrow > summary{list-style:none;cursor:pointer;display:grid;grid-template-columns:minmax(90px,1.2fr) repeat(4,minmax(0,1fr));gap:6px 12px;align-items:baseline;padding:9px 12px;font:14px var(--mono)}
+details.rrow > summary::-webkit-details-marker{display:none}
+details.rrow > summary .nm{font:600 15px var(--body)}
+details.rrow > summary .nm::before{content:"▸ ";color:var(--muted)}
+details.rrow[open] > summary .nm::before{content:"▾ "}
+details.rrow > summary span small{display:block;font:11px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.06em}
+details.rrow .srcs{padding:0 12px 10px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:4px 24px}
+@media (max-width:640px){details.rrow > summary{grid-template-columns:1fr 1fr 1fr} details.rrow .srcs{grid-template-columns:1fr}}
+details.rrow .srcs h5{margin:6px 0 2px;font:700 12px var(--display);letter-spacing:.08em;color:var(--gold)}
+details.rrow .srcs div{display:flex;justify-content:space-between;gap:10px;font-size:14px;border-bottom:1px dotted #2a2319;padding:2px 0}
+details.rrow .srcs div span:last-child{font-family:var(--mono);white-space:nowrap}
+.auralist{display:flex;flex-direction:column;gap:6px}
+details.aura{background:rgba(0,0,0,.5);border:1px solid #2e261a;border-left:3px solid #6b5532;border-radius:2px}
+details.aura.enemy{border-left-color:#8a2c22}
+details.aura > summary{list-style:none;cursor:pointer;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline;padding:9px 12px}
+details.aura > summary::-webkit-details-marker{display:none}
+details.aura > summary b{font:600 16px var(--body);color:var(--gold-hi)}
+details.aura > summary b::before{content:"▸ ";color:var(--muted);font-weight:400}
+details.aura[open] > summary b::before{content:"▾ "}
+details.aura .eff{padding:0 12px 10px 28px;display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:3px 22px;font-size:14px}
+details.aura .eff div{display:flex;justify-content:space-between;gap:10px;border-bottom:1px dotted #2a2319}
+details.aura .eff div span:last-child{font-family:var(--mono)}
+.buffbox label.check{padding:6px 8px;background:rgba(0,0,0,.35);border:1px solid #2a2319;border-radius:2px}
+/* tooltip */
+#tip{position:fixed;z-index:50;max-width:min(420px,calc(100vw - 24px));background:rgba(6,5,4,.97);border:1px solid #6b5532;box-shadow:0 8px 30px rgba(0,0,0,.8);
+  padding:10px 12px;font-size:14px;line-height:1.45;pointer-events:none;border-radius:2px}
+#tip h5{margin:0 0 4px;font:700 13px var(--display);letter-spacing:.06em;color:var(--gold)}
+#tip table{width:100%}
+#tip td{border:0;padding:1px 0;font:13px var(--mono);white-space:normal}
+#tip td:first-child{font-family:var(--body);color:#cfc7b3;padding-right:10px}
+#tip .f{margin-top:6px;color:var(--muted);font-size:12.5px}
+.method p,.method li{max-width:80ch}
+.method code{overflow-wrap:anywhere;white-space:normal}
+.method ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px}
+.mono{font-family:var(--mono)}
+.tabs .tab{font-size:13px;padding:10px 14px}
+@media (max-width:640px){ .tabs{grid-template-columns:1fr 1fr 1fr} .tab{font-size:11px} }
+</style>
+<canvas id="embers" aria-hidden="true"></canvas>
+<div class="wrap">
+  <header>
+    <div class="title-row"><canvas class="globe" data-kind="life" aria-hidden="true"></canvas><h1>Advanced Stats</h1><canvas class="globe" data-kind="mana" aria-hidden="true"></canvas></div>
+    <p class="sub">Every advanced stat of a Project Diablo 2 character, worked out from its gear, skills and auras with the rules read out of the game's own code.</p>
+    <div class="rune-rule" aria-hidden="true"></div>
+  </header>
+
+  <details class="panel loadbox" id="loadbox" open>
+    <summary><h2 id="load-h">Load a character</h2><span class="sumnote" id="load-note">Armory link or single-player save</span></summary>
+    <div class="load">
+      <div class="col">
+        <h4 style="margin-bottom:8px">From the PD2 Armory</h4>
+        <ol>
+          <li>
+            <div class="inline"><input type="text" id="armory" placeholder="Armory link or character name" autocomplete="off" spellcheck="false" aria-label="Armory link or character name"><a class="btn" id="open-api" href="#" target="_blank" rel="noopener" aria-disabled="true">Open data</a></div>
+            <div class="apiurl" id="apiurl" hidden></div>
+          </li>
+          <li>On the page that opens, save it with <b>Ctrl+S</b> (Cmd+S on a Mac) as a <code>.json</code> file, or select all and copy the text.</li>
+          <li>Drop the file below, or paste the text into the box.</li>
+        </ol>
+        <p class="hint" style="margin-top:8px">The Armory doesn't allow other sites to read it directly, so the file makes a short trip through your browser. Nothing is uploaded anywhere.</p>
+      </div>
+      <div class="col" style="display:flex;flex-direction:column;gap:10px">
+        <h4>From a file</h4>
+        <label class="drop" id="drop" tabindex="0">
+          <b>Drop an Armory .json or a single-player .d2s</b>
+          <span>or click to choose a file</span>
+          <input type="file" id="file" accept=".json,.d2s,.txt,application/json" hidden>
+        </label>
+        <details><summary class="linkbtn" style="list-style:none">Paste Armory text instead</summary>
+          <div style="display:flex;flex-direction:column;gap:8px;margin-top:8px">
+            <textarea id="paste" placeholder='{"character": {...}, "items": [...]}' spellcheck="false" aria-label="Armory JSON text"></textarea>
+            <button class="btn" id="paste-go" type="button">Load pasted text</button>
+          </div>
+        </details>
+        <div class="status" id="status" role="status" aria-live="polite"></div>
+      </div>
+    </div>
+  </details>
+
+  <section class="panel" id="charpanel" aria-labelledby="who-name">
+    <div class="who">
+      <span class="name" id="who-name">—</span>
+      <span class="meta" id="who-meta"></span>
+      <span class="pill ex" id="who-src"></span>
+    </div>
+    <div class="viewbar">
+      <div class="seg" role="group" aria-label="Whose stats"><button type="button" id="v-char" aria-pressed="true">Character</button><button type="button" id="v-merc" aria-pressed="false">Mercenary</button></div>
+      <label class="check" for="merc-on" id="merc-on-l"><input type="checkbox" id="merc-on"> Mercenary is with me <span class="why">(its auras apply to you)</span></label>
+    </div>
+    <div class="ctl">
+      <label>Difficulty<select id="diff"><option value="0">Normal</option><option value="1">Nightmare</option><option value="2" selected>Hell</option></select></label>
+      <label class="charonly">Weapon set<select id="swap"><option value="0">I (primary)</option><option value="1">II (switch)</option></select></label>
+      <label class="charonly">Skill for attack speed<select id="spskill"></select></label>
+      <label class="charonly">Targets hit (Strafe)<input type="number" id="tgt" min="1" max="10" value="1"></label>
+    </div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button class="tab" role="tab" id="t-overview" aria-controls="p-overview" aria-selected="true" data-hash="overview">Overview</button>
+    <button class="tab" role="tab" id="t-offense" aria-controls="p-offense" aria-selected="false" data-hash="offense">Offense</button>
+    <button class="tab" role="tab" id="t-defense" aria-controls="p-defense" aria-selected="false" data-hash="defense">Defense</button>
+    <button class="tab" role="tab" id="t-speed" aria-controls="p-speed" aria-selected="false" data-hash="speed">Speed</button>
+    <button class="tab" role="tab" id="t-skills" aria-controls="p-skills" aria-selected="false" data-hash="skills">Skills &amp; buffs</button>
+    <button class="tab" role="tab" id="t-gear" aria-controls="p-gear" aria-selected="false" data-hash="gear">Gear</button>
+    <button class="tab" role="tab" id="t-all" aria-controls="p-all" aria-selected="false" data-hash="all">All stats</button>
+    <button class="tab" role="tab" id="t-method" aria-controls="p-method" aria-selected="false" data-hash="method">How it works</button>
+  </nav>
+
+  <section class="panel pane" id="p-overview" role="tabpanel" aria-labelledby="t-overview">
+    <details class="sec" id="sec-ov-auras" open><summary><h2>Auras and buffs on you</h2><span class="sumnote" id="sec-ov-auras-note"></span></summary>
+      <div class="secin">
+        <p class="hint">Switch on the skills you keep running (one aura of your own at a time). Everything else listed below is always on: auras and "when equipped" skills from your gear, and your mercenary's auras while it's with you. Open an aura to see exactly what it gives you.</p>
+        <div class="buffs buffbox"></div>
+        <div class="auralist"></div>
+      </div>
+    </details>
+    <div class="grid" id="ov-cards"></div>
+    <details class="sec" id="sec-bh" open><summary><h2>In-game Advanced Stats panel</h2><span class="sumnote" id="sec-bh-note"></span></summary>
+      <div class="secin">
+        <p class="hint">The same lines PD2's Advanced Stats window shows, in the same order. Hover or tap a value to see where it comes from.</p>
+        <div class="bh" id="bh"></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel pane" id="p-offense" role="tabpanel" aria-labelledby="t-offense" hidden>
+    <details class="sec" id="sec-atk" open><summary><h2>Your attack</h2><span class="sumnote" id="sec-atk-note"></span></summary>
+      <div class="secin">
+        <div class="grid" id="off-cards"></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-hit"><summary><h2>Chance to hit</h2><span class="sumnote" id="sec-hit-note"></span></summary>
+      <div class="secin">
+        <p class="hint">Normal attack against a monster of the given level and defense. The game clamps it to 5–95%.</p>
+        <div class="ctl"><label>Monster level<input type="number" id="mlvl" min="1" max="120" value="85"></label><label>Monster defense<input type="number" id="mdef" min="0" max="20000" value="1500"></label><div class="big2" id="hitc" style="padding-bottom:4px">–</div></div>
+        <div class="tablewrap"><table id="hit-t"><thead><tr><th>Target</th><th>Level</th><th>Defense</th><th>Hit chance</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-vs" open><summary><h2>Against a monster</h2><span class="sumnote" id="sec-vs-note"></span></summary>
+      <div class="secin">
+    <p class="hint">Your normal attack against one monster, using the game's damage roll, critical and deadly strike, the monster's resistances and your pierce. Change the target here; the numbers below and the skill table use it.</p>
+    <div class="ctl"><label style="flex:1 1 260px">Map or area<select id="tg-lvl"></select></label><label style="flex:1 1 220px">Monster<select id="tg-mon"></select></label><label id="tg-kind-l">Type<select id="tg-kind"><option value="normal">Normal</option><option value="champion">Champion</option><option value="unique">Unique</option></select></label></div>
+    <p class="hint" id="tg-note"></p>
+    <details class="ovr"><summary>Manual override</summary>
+      <div class="ctl" style="margin-top:8px"><label>Area level<input type="number" id="ov-area" min="1" max="120" placeholder="auto"></label>
+        <label>Fire res %<input type="number" id="ov-fire" placeholder="auto"></label><label>Cold res %<input type="number" id="ov-cold" placeholder="auto"></label>
+        <label>Lightning res %<input type="number" id="ov-light" placeholder="auto"></label><label>Poison res %<input type="number" id="ov-poison" placeholder="auto"></label>
+        <label>Magic res %<input type="number" id="ov-magic" placeholder="auto"></label><label>Physical res %<input type="number" id="ov-phys" placeholder="auto"></label>
+        <button type="button" class="btn" id="ov-clear">Clear</button></div>
+      <p class="hint">Leave a box empty to use the game's value for this monster. Map modifiers that change monster resistances or level aren't applied automatically; enter them here.</p>
+    </details>
+    <div class="grid" id="vs-cards"></div>
+
+      </div>
+    </details>
+    <details class="sec" id="sec-dr" open><summary><h2>More skill damage, or less enemy resistance?</h2><span class="sumnote" id="sec-dr-note"></span></summary>
+      <div class="secin">
+    <p class="hint">How much each option raises your damage from where you are now. Both multiply the hit, but they don't grow the same way: skill damage adds to a total that's already above 100%, while every point of −resist below 0 only counts half, and pierce does nothing against an immune monster.</p>
+    <div class="ctl"><label class="check" style="flex:1 1 100%" for="dr-inf"><input type="checkbox" id="dr-inf"> Infinity on your mercenary (level 12 Conviction: −34% fire, cold and lightning resist)</label>
+      <label>Curse on the monster<select id="dr-curse"><option value="">None</option><option value="91">Lower Resist</option><option value="66">Amplify Damage</option><option value="87">Decrepify</option></select></label><label>Curse level<input type="number" id="dr-curse-lvl" min="1" max="60" value="20"></label></div>
+    <p class="hint">These lower the target's resistances everywhere on this tab. Against an immune monster (base resist 100 or more) PD2 halves them, and once the total drops below 100 your −resist gear works again.</p>
+    <div class="ctl"><label>Damage type<select id="dr-el"></select></label><label>Monster base resist %<input type="number" id="dr-res" min="-100" max="200"></label><label>Your damage % (skill / mastery / ED)<input type="number" id="dr-dmg" min="-90" max="2000"></label><label>Your −enemy resist %<input type="number" id="dr-pierce" min="0" max="300"></label></div>
+    <div class="dr-sum" id="dr-sum"></div>
+    <div class="chartwrap"><svg id="dr-chart" viewBox="0 0 640 260" role="img" aria-label="Damage multiplier from extra skill damage versus extra enemy resist reduction"></svg><div class="ctip" id="dr-tip" hidden></div></div>
+    <div class="tablewrap"><table id="dr-t"><thead><tr><th>Added</th><th>+ skill damage</th><th>− enemy resist</th><th>Better choice</th></tr></thead><tbody></tbody></table></div>
+
+      </div>
+    </details>
+  </section>
+
+  <section class="panel pane" id="p-defense" role="tabpanel" aria-labelledby="t-defense" hidden>
+    <details class="sec" id="sec-def" open><summary><h2>Defense, block and recovery</h2><span class="sumnote" id="sec-def-note"></span></summary>
+      <div class="secin">
+        <div class="grid" id="def-cards"></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-res" open><summary><h2>Resistances</h2><span class="sumnote" id="sec-res-note"></span></summary>
+      <div class="secin">
+        <p class="hint">Open an element to see every item, charm, skill and aura that adds to it, and what raises its maximum.</p>
+        <div class="reslist" id="res-list"></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-el" open><summary><h2>Effective life</h2><span class="sumnote" id="sec-el-note"></span></summary>
+      <div class="secin">
+    <p class="hint">The raw damage of each type it takes to kill you from full life, after your resistances, damage reduction and absorb, in the difficulty chosen above.</p>
+    <div class="tablewrap"><table id="el-t"><thead><tr><th>Damage type</th><th>Your resist</th><th>Reduced / absorbed</th><th>Raw damage to kill you</th><th>× your life</th></tr></thead><tbody></tbody></table></div>
+
+      </div>
+    </details>
+    <details class="sec" id="sec-mh"><summary><h2>Monsters hitting you</h2><span class="sumnote" id="sec-mh-note"></span></summary>
+      <div class="secin">
+    <p class="hint">Typical Hell melee monsters at an area level, using the game's monster scaling and hit roll: how often they hit your defense, how often that gets past your block, and what one hit does after damage reduction.</p>
+    <div class="ctl"><label>Area level<input type="number" id="mh-area" min="1" max="120" value="85"></label></div>
+    <div class="tablewrap"><table id="mh-t"><thead><tr><th>Monster</th><th>Type</th><th>Level</th><th>Attack rating</th><th>Hits you</th><th>After block</th><th>Damage per hit</th><th>Hits to kill you</th></tr></thead><tbody></tbody></table></div>
+
+      </div>
+    </details>
+  </section>
+
+  <section class="panel pane" id="p-speed" role="tabpanel" aria-labelledby="t-speed" hidden>
+    <div class="grid" id="sp-cards"></div>
+    <details class="sec" id="sec-bp" open><summary><h2>Breakpoint tables</h2><span class="sumnote" id="sec-bp-note"></span></summary>
+      <div class="secin">
+        <div id="sp-lists" style="display:flex;flex-direction:column;gap:18px"></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel pane" id="p-skills" role="tabpanel" aria-labelledby="t-skills" hidden>
+    <details class="sec" id="sec-sk-auras" open><summary><h2>Auras and buffs</h2><span class="sumnote" id="sec-sk-auras-note"></span></summary>
+      <div class="secin">
+        <p class="hint">The same switches as on the Overview. Their bonuses flow into every number on the page.</p>
+        <div class="buffs buffbox"></div>
+        <div class="ctl"><label>Aura from another party member<select id="paura"><option value="">None</option></select></label><label>Aura level<input type="number" id="paura-lvl" min="1" max="60" value="18"></label></div>
+        <div class="auralist"></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-tree" open><summary><h2>Skill tree</h2><span class="sumnote" id="sec-tree-note"></span></summary>
+      <div class="secin">
+        <div class="tree" id="tree"></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-sd" open><summary><h2>Skill damage</h2><span class="sumnote" id="sec-sd-note"></span></summary>
+      <div class="secin">
+    <p class="hint">What each skill's damage box and tooltip show at your level, with your synergies, masteries and gear. "Total" adds your weapon where the skill uses it; "vs target" applies the monster chosen under Offense (its resistance and your pierce).</p>
+    <div class="tablewrap"><table id="sd-t"><thead><tr><th>Skill</th><th>Level</th><th>Type</th><th>Skill damage</th><th>Total</th><th>Average vs target</th><th>Notes</th></tr></thead><tbody></tbody></table></div>
+
+      </div>
+    </details>
+    <details class="sec" id="sec-sum"><summary><h2>Summons</h2><span class="sumnote" id="sec-sum-note"></span></summary>
+      <div class="secin">
+        <div class="tablewrap"><table id="sum-t"><thead><tr><th>Summon</th><th>How many</th><th>Level</th><th>Life</th><th>Damage</th><th>Attack rating</th><th>Defense</th><th>Resists (F/C/L/P)</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-isk"><summary><h2>Skills from items</h2><span class="sumnote" id="sec-isk-note"></span></summary>
+      <div class="secin">
+        <div class="tablewrap"><table id="iskills"><thead><tr><th>Skill</th><th>How</th><th>Level</th><th>Detail</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel pane" id="p-gear" role="tabpanel" aria-labelledby="t-gear" hidden>
+    <details class="sec" id="sec-eq" open><summary><h2>Equipped</h2><span class="sumnote" id="sec-eq-note"></span></summary>
+      <div class="secin">
+        <div class="items" id="items-eq"></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-ch"><summary><h2>Charms in the inventory</h2><span class="sumnote" id="sec-ch-note"></span></summary>
+      <div class="secin">
+        <div class="items" id="items-ch"></div>
+      </div>
+    </details>
+    <div id="merc-wrap">    <details class="sec" id="sec-mi"><summary><h2>Mercenary</h2><span class="sumnote" id="sec-mi-note"></span></summary>
+      <div class="secin">
+        <div class="items" id="items-merc"></div>
+      </div>
+    </details>
+    </div>
+  </section>
+
+  <section class="panel pane" id="p-all" role="tabpanel" aria-labelledby="t-all" hidden>
+    <div class="ctl"><label style="flex:1 1 260px">Filter<input type="text" id="flt" class="filter" placeholder="e.g. resist, skill, damage"></label></div>
+    <div class="tablewrap"><table class="all" id="all-t"><thead><tr><th>ID</th><th>Stat</th><th>Total</th><th>Where it comes from</th></tr></thead><tbody></tbody></table></div>
+  </section>
+
+  <section class="panel" id="merc-view" hidden>
+    <div class="ctl" id="merc-lvl-row" hidden><label>Mercenary level<input type="number" id="merc-lvl" min="1" max="99"></label><p class="hint" style="align-self:center">The Armory export doesn't include the mercenary's level, so set it here.</p></div>
+    <div id="merc-empty" class="hint" hidden>This character data has no mercenary.</div>
+    <div class="grid" id="merc-cards"></div>
+    <details class="sec" id="sec-mres" open><summary><h2>Resistances</h2><span class="sumnote" id="sec-mres-note"></span></summary>
+      <div class="secin">
+        <div class="reslist" id="merc-res"></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-maur" open><summary><h2>Auras</h2><span class="sumnote" id="sec-maur-note"></span></summary>
+      <div class="secin">
+        <div class="auralist" id="merc-auras"></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-mitems"><summary><h2>Items</h2><span class="sumnote" id="sec-mitems-note"></span></summary>
+      <div class="secin">
+        <div class="items" id="merc-items"></div>
+      </div>
+    </details>
+    <details class="sec" id="sec-mall"><summary><h2>All stats</h2><span class="sumnote" id="sec-mall-note"></span></summary>
+      <div class="secin">
+        <div class="tablewrap"><table class="all" id="merc-all"><thead><tr><th>ID</th><th>Stat</th><th>Total</th><th>Where it comes from</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel pane method" id="p-method" role="tabpanel" aria-labelledby="t-method" hidden>
+    <div class="dev">
+  <nav class="toc" aria-label="How it works contents">
+    <a href="#m-data">Where the data comes from</a>
+    <a href="#m-engine">Adding up stats</a>
+    <a href="#m-panel">The in-game panel</a>
+    <a href="#m-screen">Attack rating, defense, damage</a>
+    <a href="#m-block">Block</a>
+    <a href="#m-regen">Regeneration</a>
+    <a href="#m-speed">Frames and breakpoints</a>
+    <a href="#m-auras">Auras and buffs</a>
+    <a href="#m-loot">Magic find, gold, experience</a>
+    <a href="#m-move">Movement</a>
+    <a href="#m-hitmon">Your damage to monsters</a>
+    <a href="#m-returns">Skill damage vs −resist</a>
+    <a href="#m-taken">Damage you take</a>
+    <a href="#m-monsters">Monster stats</a>
+    <a href="#m-skills">Skill damage</a>
+    <a href="#m-minions">Summons and mercenaries</a>
+    <a href="#m-limits">What isn't covered</a>
+  </nav>
+  <div style="display:flex;flex-direction:column;gap:18px;min-width:0">
+    <p class="callout">Every rule on this page was read out of Project Diablo 2's own program files: D2Common, D2Game and D2Client (Diablo II 1.13c), ProjectDiablo.dll (PD2's changes on top) and BH.dll (PD2's Advanced Stats window). Where a rule is marked <span class="badge v">VERIFIED</span>, the game's own machine code was run on random inputs and matched this page's formula every time. <span class="badge r">READ</span> means the rule was read from the code but not run.</p>
+
+    <section id="m-data">
+      <h3>Where the data comes from</h3>
+      <ul>
+        <li><b>Armory export.</b> The Armory's character JSON (<code>api.projectdiablo2.com/game/character/NAME</code>) lists each item's final modifiers, with socketed runes and jewels already folded into the parent item. Set items carry no set-bonus list there, so partial and full set bonuses are rebuilt from SetItems.txt and Sets.txt by how many pieces are worn.</li>
+        <li><b>Single-player save.</b> The <code>.d2s</code> reader follows PD2's own item reader (ProjectDiablo.dll 0x102D8C40, which replaces the stock one). Items saved before version 0x67 use 9-bit stat ids, newer items 10-bit ids. Set bonus lists stored on the item are used as they are.</li>
+        <li><b>Game tables.</b> ItemStatCost, Skills, SkillDesc, CharStats, Weapons, Armor, Misc, ItemTypes, Properties, Gems, Sets, SetItems and AnimData, taken from PD2's current data files.</li>
+      </ul>
+    </section>
+
+    <section id="m-engine">
+      <h3>Adding up stats <span class="badge r">READ</span></h3>
+      <p>A stat's total is the sum of every stat list on the character (D2Common 0x6FD88CD0) plus its "op" links from ItemStatCost (0x6FD89530), applied recursively:</p>
+<pre class="code"><span class="c">// item level: op 13 = % of the item's own base value (enhanced damage/defense), op 4/5 = per character level</span>
+<span class="c">// character level (D2Common 0x6FD89530):</span>
+op 1/11: v += v0 × T(source) / 100            <span class="c">// e.g. +% life</span>
+op 2:    v += (T(source) × base(level)) &gt;&gt; param
+op 8:    mana += ManaPerMagic × (energy − base energy) &lt;&lt; 6
+op 9:    life += LifePerVitality × (vitality − base vitality) &lt;&lt; 6, stamina the same with StaminaPerVitality</pre>
+      <p>An item's own enhanced damage or defense stays inside that item when the item has damage or defense to apply it to (D2Common 0x6FD89E5F). Enhanced damage on items with no damage of their own (a ring, body armor, a shield) reaches the character and multiplies the weapon.</p>
+      <p><b>+Skills</b> (D2Common 0x6FD9FCB0): all skills, class skills, tab skills, single skills and elemental skills only raise skills that have at least one hard point; "+X to a skill (any class)" (oskills) always count.</p>
+      <p><b>Passive skills</b> (D2Common #10056, 0x6FDA2480) apply their passive stats whenever the skill has a passive state, whatever weapon is held. Masteries are matched to the weapon later, where the attack code asks for them.</p>
+    </section>
+
+    <section id="m-panel">
+      <h3>The in-game panel <span class="badge v">VERIFIED</span></h3>
+      <p>PD2's Advanced Stats window is drawn by BH.dll (0x1007C040). Each line reads the character's stat totals; this page repeats the same arithmetic. Checked line by line against a real character's window, all lines matched.</p>
+<pre class="code">resistance penalty = {0, −20, −50}[difficulty] × 2
+max resist        = min(maximum-resist bonus + 75, 90)
+cold length       = cannot be frozen ? 0 : (2 − min(half freeze, 2)) × 50
+poison length     = 100 − poison length reduction − penalty
+curse length      = max(100 − curse resistance %, 25)
+base AR           = ToHitFactor + 5 × (dexterity − 7)  +  gear AR
+base defense      = dexterity ÷ 4  +  gear defense
+crushing blow     = Two-Handed Mastery (if weapon matches) + items;  efficiency 100 + mastery + items
+open wounds /s    = deep wounds + ((level table + 25) × 25) &gt;&gt; 8        <span class="c">// D2Game 0x6FCCC940</span>
+deadly strike     = min(chance, min(75 + max-DS bonus, 100));  multiplier 150 + bonus
+critical strike   = min(masteries + skills + items, 75);         multiplier 200 + bonus
+added damage      = value + value × elemental mastery / 100
+poison shown      = damage per frame ÷ 256 × length</pre>
+      <p>The FCR and FHR lists in the window are fixed tables inside BH; the IAS list is worked out live from the skill's animation. This page computes all three from the animation data (see Frames), and they agree with BH's.</p>
+    </section>
+
+    <section id="m-screen">
+      <h3>Attack rating, defense, damage <span class="badge v">VERIFIED</span></h3>
+      <p>These are the numbers on the character screen (D2Client), checked by running the screen's own functions on 30,000 random characters.</p>
+<pre class="code">base AR   = gear AR + 5 × dex − 35 + ToHitFactor                       <span class="c">// D2Common #10621</span>
+AR        = base + base × (AR% + mastery AR% + skill to-hit) / 100     <span class="c">// D2Client 0x6FADC4F0</span>
+defense   = (gear defense + dex ÷ 4) × (100 + defense% + skill defense%) / 100   <span class="c">// D2Common #10672</span>
+damage %  = damage% + mastery% + str × StrBonus/100 + dex × DexBonus/100  (at least −90)
+min dmg   = (100 + off-weapon ED + damage %) × weapon min / 100 + weapon's flat damage
+            + fire/cold/lightning/magic (with masteries) + poison            <span class="c">// D2Client 0x6FAE1220, 0x6FAE0E30</span>
+hit chance = clamp(200 × AR/(AR+def) × alvl/(alvl+dlvl), 5, 95)        <span class="c">// D2Game 0x6FCFDE90</span></pre>
+      <p>PD2 replaces the mastery lookup (ProjectDiablo.dll 0x102728B0): melee masteries use stats 342–344, throwing masteries 345–347, counted only when the mastery's item type matches the weapon.</p>
+    </section>
+
+    <section id="m-block">
+      <h3>Block <span class="badge v">VERIFIED</span></h3>
+<pre class="code">block = (shield and gear block + CharStats BlockFactor) × (dex − 15) ÷ (2 × level), at most 75   <span class="c">// D2Common #10212</span></pre>
+      <p>Only with a shield. Stock Diablo II divides block by 3 while you run; PD2's block roll (ProjectDiablo.dll 0x1026FB60) removes that. Weapon block (stat 348, e.g. Weapon Block) is tried only when shield block is below 1%, is capped at 75%, needs two claws or a two-handed sword, and is halved in PvP maps <span class="badge r">READ</span>.</p>
+    </section>
+
+    <section id="m-regen">
+      <h3>Regeneration <span class="badge v">VERIFIED</span></h3>
+<pre class="code">life per frame   = replenish life (1/256 life), 25 frames a second      <span class="c">// D2Game 0x6FC97CB0</span>
+mana per frame   = max(1, max mana ÷ (ManaRegen × 25)) × (100 + regenerate mana %) / 100   <span class="c">// 0x6FC97950</span>
+stamina, standing = max stamina &gt;&gt; 8 per frame, walking &gt;&gt; 9, × (100 + heal stamina %)</pre>
+      <p>PD2 sets ManaRegen to 120 for every class, so a full mana bar refills in 120 seconds with no bonus.</p>
+    </section>
+
+    <section id="m-speed">
+      <h3>Frames and breakpoints <span class="badge v">VERIFIED</span></h3>
+<pre class="code">effective X  = 120 × X / (120 + X)                  <span class="c">// IAS, FCR, FHR, FBR (D2Common 0x6FD823E0)</span>
+cast         speed = min(100 + effective FCR, 175)
+hit recovery speed = 50 + effective FHR
+block        speed = 50 (100 with Holy Shield) + effective FBR
+attack       speed = attack rate + effective IAS, −30 for sequences, clamped 15–175
+rate   = animation speed × speed / 100
+frames = ceil((animation length − start frame) × 256 / rate) − 1      <span class="c">// D2Common 0x6FD83110</span></pre>
+      <p>The animation is picked by class, weapon class and form (AnimData). Chain Lightning and Frozen Orb play a 19-frame sequence at cast speed. Two skills change attack rate while they play: Dragon Tail (−20, both server and client) and Double Swing (+50 on the client, which paces held attacks) <span class="badge r">READ</span>. Werewolf and werebear attacks are rebuilt from the weapon's speed and its own IAS (D2Common 0x6FD83C20). The full attack model, including follow-up swings, is the one in the Attack Speed calculator.</p>
+    </section>
+
+    <section id="m-auras">
+      <h3>Auras and buffs <span class="badge r">READ</span></h3>
+      <ul>
+        <li><b>Paladin-style auras</b> (skill function 65: Might, Prayer, Fanaticism, Concentration…): you get the aura's stats and its "passive" stats. PD2 removes a stock check at D2Game 0x6FCBAA75, so the passive part applies to every such aura. Party members and mercenaries get the aura stats only.</li>
+        <li><b>Offensive auras</b> (Holy Fire/Freeze/Shock, Conviction, Sanctuary): you get the passive stats; enemies get the aura stats.</li>
+        <li><b>Self buffs</b> (armors, Burst of Speed, Fade, Holy Shield): aura and passive stats. Battle Orders, Battle Command, Shout, Enchant and the wereforms: aura stats.</li>
+        <li><b>Levels.</b> <code>lvl</code> is the level including +skills; <code>blvl</code> is your hard points in that exact skill, so an item-granted copy (Call to Arms, Hustle) has <code>blvl</code> 0.</li>
+        <li>Two sources of the same state never stack: the one applied last wins, and item auras re-apply every second.</li>
+      </ul>
+    </section>
+
+    <section id="m-loot">
+      <h3>Magic find, gold, experience <span class="badge v">VERIFIED</span></h3>
+<pre class="code">effective MF = MF ≤ 10 ? MF : MF × f / (MF + f), with f = 250 unique, 500 set, 600 rare; magic uses MF as is   <span class="c">// D2Game 0x6FC2E130</span>
+gold         = gold × (100 + GF) / 100                                    <span class="c">// D2Game 0x6FC2F260</span>
+experience   = exp + exp × bonus / 100, after the level-difference penalty <span class="c">// D2Game 0x6FCFC030</span></pre>
+    </section>
+
+    <section id="m-move">
+      <h3>Movement <span class="badge v">VERIFIED</span></h3>
+<pre class="code">speed % = max(25, velocity% + 150 × FRW / (150 + FRW)),  velocity% = 100 (+50 running) + skills
+velocity = WalkVelocity × 256 × speed% / 100                              <span class="c">// D2Common 0x6FD83110</span></pre>
+    </section>
+
+    <section id="m-hitmon">
+      <h3>Your damage to monsters <span class="badge v">VERIFIED</span></h3>
+<pre class="code">physical = (weapon damage + flat damage) × (100 + ED + damage% + str/dex bonus + mastery)/100      <span class="c">// D2Game 0x6FCFC530</span>
+crit / deadly strike: crit rolls first (cap 75), deadly strike only if the crit misses; one of them, ×(200+crit mult)% or ×(150+DS mult)%   <span class="c">// PD2 0x10270E00</span>
+resist used = monster resist − pierce (pierce ignored while resist ≥ 100); below 0 it counts half; floor −100   <span class="c">// PD2 0x1026F410</span>
+damage × (100 − resist)/100, after the monster's flat damage reduction
+crushing blow = current life ÷ 8 (players and mercenaries ÷ 10, prime evils less) × (1 + efficiency%), less physical resist   <span class="c">// PD2 0x102AF610</span>
+open wounds bleed per frame = level table + 25 + 5 × deep wounds, for 125 frames                     <span class="c">// PD2 0x102AF060</span>
+leech = physical damage dealt × steal% ÷ (1/2/3 by difficulty) × monster Drain%                        <span class="c">// PD2 0x102700F0</span></pre>
+      <p>Auras and curses that lower resist (Conviction, Lower Resist) are halved on immune monsters in PD2 (stock Diablo II divides them by 5), which can bring the monster below 100 so pierce works again.</p>
+    </section>
+    <section id="m-returns">
+      <h3>Skill damage vs −resist</h3>
+      <p>Both multiply the same hit: <code>(100 + damage%) × (100 − resist)</code>. One more point of damage% adds <code>1 ÷ (100 + damage%)</code>, which shrinks as you stack it. One more point of −resist adds <code>1 ÷ (100 − resist)</code> while the monster's resist is still 0 or more, only half of that once it is below 0, nothing at −100, and nothing at all against an immune monster.</p>
+    </section>
+    <section id="m-taken">
+      <h3>Damage you take <span class="badge v">VERIFIED</span></h3>
+<pre class="code">per damage type: flat DR (physical) or magic DR (elemental) → resist or %DR (cap 50) → absorb % (cap 40) → absorb flat
+resist = min(gear + difficulty penalty (0/−40/−100), min(75 + max resist, 90))           <span class="c">// D2Game 0x6FCFC0B0, PD2 0x1026F680</span>
+raw damage to kill you = flat + (life + absorb flat) ÷ ((1 − resist)(1 − absorb%))</pre>
+    </section>
+    <section id="m-monsters">
+      <h3>Monster stats <span class="badge r">READ</span></h3>
+      <p>MonStats values scaled by MonLvl for the difficulty and the monster's level (D2Common 0x6FDA4A00, <span class="badge v">VERIFIED</span>). In Nightmare and Hell the level is the area's level; PD2 adds a map's area-level bonus and sets a rotating set of Hell zones to 85 (PD2 0x10268D00). Champions are 2 levels higher with +66% damage and +49% attack rating in Hell; uniques 3 levels higher. The monster's hit chance uses the same formula as yours, against your defense plus defense vs melee.</p>
+    </section>
+    <section id="m-skills">
+      <h3>Skill damage <span class="badge v">VERIFIED</span></h3>
+      <p>Elemental skill damage is <code>(EMin + level tiers) &lt;&lt; HitShift</code>, plus synergy % (hard points only), then elemental mastery % of that total (D2Common 0x6FDA0360 / 0x6FDA0460; PD2 adds magic mastery). The damage box each skill shows is chosen by SkillDesc <code>descdam</code> (D2Client 0x6FADFD30). Checked against the game's own code on 58,000 cases and its compiled calc files on 24,000.</p>
+    </section>
+    <section id="m-minions">
+      <h3>Summons and mercenaries <span class="badge v">VERIFIED</span></h3>
+      <p>A summon's level is <code>min(character level, 3 × level/4 + skill level)</code> for most summons (D2Game 0x6FC6E2A0), and its stats are MonStats × MonLvl plus the skill's own bonuses (D2Game 0x6FC6F970). A mercenary's stats come from the Hireling.txt row for its type and level: strength and dexterity grow by the per-level value ÷ 8, resists by ÷ 4 (D2Game 0x6FC68BA0).</p>
+    </section>
+
+    <section id="m-limits">
+      <h3>What isn't covered</h3>
+      <ul>
+        <li>The experience-progress line of the in-game window (it uses BH's own area tables).</li>
+        <li>A summon's or mercenary's own equipment (Valkyrie, shadows, Iron Golem's item) and monster elemental attacks.</li>
+        <li>Damage per second uses your normal attack; skills with special timing (sequences, charge-ups, traps) aren't turned into damage per second.</li>
+        <li>Throw damage on the character screen: PD2 replaces it, and one argument of the replacement is not pinned down yet.</li>
+        <li>Temporary effects the page can't know about: shrines, potions, curses on you, map modifiers.</li>
+        <li>Enhanced damage and "+maximum damage" together on one non-weapon item (for example a jewel in a helm) depend on the order the game loads stats.</li>
+        <li>Everything here matches the client install; PD2's realm servers could run different code.</li>
+      </ul>
+    </section>
+  </div>
+</div>
+
+  </section>
+
+  <footer>Game rules recovered from Project Diablo 2's own files (D2Common, D2Game, D2Client, ProjectDiablo.dll and the BH panel), not from wikis. Addresses are listed under How it works. Not affiliated with Project Diablo 2 or Blizzard.</footer>
+</div>
+<div id="tip" hidden></div>
+
+
+
+
